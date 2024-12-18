@@ -105,7 +105,7 @@ class NFTTrackerApp:
             self.table_placeholder.empty()
 
             # Display the styled DataFrame with highlighting
-            self.table_placeholder.dataframe(styled_df, use_container_width=True, height=600)  # Set height to avoid scroll bar
+            self.table_placeholder.dataframe(styled_df, use_container_width=True, height=500)  # Set height to avoid scroll bar
 
             # Add the audio notification if there's a change in availability
             self.play_audio_notification()
@@ -113,8 +113,8 @@ class NFTTrackerApp:
         except requests.RequestException as e:
             st.error(f"Failed to fetch data: {e}")
 
-        # Refresh every 5 seconds by re-running the function
-        time.sleep(5)  # Delay for 5 seconds
+        # Refresh every 30 seconds by re-running the function
+        time.sleep(30)  # Delay for 30 seconds
         self.fetch_nft_data()  # Recursively call the fetch function to keep it updating
 
     def get_rarity(self, attributes):
