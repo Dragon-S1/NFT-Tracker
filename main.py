@@ -105,7 +105,7 @@ class NFTTrackerApp:
             self.table_placeholder.empty()
 
             # Display the styled DataFrame with highlighting
-            self.table_placeholder.dataframe(styled_df, use_container_width=True, height=500)  # Set height to avoid scroll bar
+            self.table_placeholder.dataframe(styled_df, use_container_width=True, height=600)  # Set height to avoid scroll bar
 
             # Add the audio notification if there's a change in availability
             self.play_audio_notification()
