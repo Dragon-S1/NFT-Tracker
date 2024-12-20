@@ -2,6 +2,9 @@ import streamlit as st
 import requests
 import pandas as pd
 import time
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 class NFTTrackerApp:
     def __init__(self):
@@ -20,7 +23,7 @@ class NFTTrackerApp:
         # Initialize previous availability data
         self.prev_availability = {}
 
-        # Initially fetch NFT data
+        # Fetch NFT data
         self.fetch_nft_data()
 
     def fetch_nft_data(self):
@@ -82,8 +85,8 @@ class NFTTrackerApp:
             # Convert the combined dictionary into a pandas DataFrame
             nft_df = pd.DataFrame(nft_dict.values())
 
-            # Check if availability has changed, if so, play a sound notification
-            self.check_availability_changes(nft_dict)
+            # Check if any new NFTs are added and send an email notification
+            self.check_new_nfts(nft_dict)
 
             # Apply conditional row styling based on availability
             def apply_row_style(row):
@@ -107,9 +110,6 @@ class NFTTrackerApp:
             # Display the styled DataFrame with highlighting
             self.table_placeholder.dataframe(styled_df, use_container_width=True, height=750)  # Set height to avoid scroll bar
 
-            # Add the audio notification if there's a change in availability
-            self.play_audio_notification()
-
         except requests.RequestException as e:
             st.error(f"Failed to fetch data: {e}")
 
@@ -124,27 +124,46 @@ class NFTTrackerApp:
                 return attribute["value"]
         return "Unknown"  # Return 'Unknown' if rarity is not found
 
-    def check_availability_changes(self, nft_dict):
-        """Check if availability has changed."""
+    def check_new_nfts(self, nft_dict):
+        """Check if any new NFTs are added."""
+        new_nfts = []
         for nft_name, nft_data in nft_dict.items():
-            current_availability = nft_data["Availability"]
-            if nft_name in self.prev_availability:
-                prev_availability = self.prev_availability[nft_name]
-                # If availability changed, update the state and flag it for audio
-                if current_availability != prev_availability:
-                    self.availability_changed = True
-            # Update previous availability
-            self.prev_availability[nft_name] = current_availability
+            if nft_name not in self.prev_availability:
+                new_nfts.append(nft_name)
 
-    def play_audio_notification(self):
-        """Play an audio notification if availability changed."""
-        if hasattr(self, 'availability_changed') and self.availability_changed:
-            st.markdown("""
-            <audio autoplay>
-                <source src="https://www.soundjay.com/button/beep-07.wav" type="audio/wav">
-            </audio>
-            """, unsafe_allow_html=True)
-            self.availability_changed = False  # Reset the flag
+        # If new NFTs are found, send an email
+        if new_nfts:
+            self.send_email_notification(new_nfts)
+
+        # Update previous availability
+        self.prev_availability = nft_dict
+
+    def send_email_notification(self, new_nfts):
+        """Send email notification for newly added NFTs."""
+        sender_email = st.secrets["email"]["sender_email"]
+        sender_app_password = st.secrets["email"]["sender_app_password"]
+        recipient_emails = st.secrets["email"]["recipient_emails"].split(",")
+
+        # Prepare the email content
+        subject = "Metalcore | S2 | New NFTs Added!"  # Updated subject line
+        body = f"The following NFTs were just added:\n\n" + "\n".join(new_nfts)
+
+        # Setting up the MIME
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = ", ".join(recipient_emails)
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+
+        try:
+            # Connect to the Gmail SMTP server
+            with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                server.starttls()
+                server.login(sender_email, sender_app_password)
+                server.sendmail(sender_email, recipient_emails, msg.as_string())
+            st.success("Email sent successfully!")
+        except Exception as e:
+            st.error(f"Failed to send email: {e}")
 
 if __name__ == "__main__":
     # Initialize the app
